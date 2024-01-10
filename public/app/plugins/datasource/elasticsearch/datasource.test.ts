@@ -1010,7 +1010,7 @@ describe('ElasticDatasource', () => {
         ],
       });
 
-      expect(ds.getLogsSampleDataProvider(request)).not.toBeDefined();
+      expect(ds.getDataProvider(SupplementaryQueryType.LogsSample, request)).not.toBeDefined();
     });
 
     it('returns a logs sample provider given a time series query', () => {
@@ -1023,7 +1023,7 @@ describe('ElasticDatasource', () => {
         ],
       });
 
-      expect(ds.getLogsSampleDataProvider(request)).toBeDefined();
+      expect(ds.getDataProvider(SupplementaryQueryType.LogsSample, request)).toBeDefined();
     });
   });
 });
