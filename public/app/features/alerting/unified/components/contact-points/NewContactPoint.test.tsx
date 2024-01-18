@@ -21,6 +21,13 @@ import 'core-js/stable/structured-clone';
 const server = setupMswServer();
 const user = userEvent.setup();
 
+// We need to mock the hooks as BroadCastChannel is not available in jest environment
+jest.mock('app/features/alerting/unified/utils/tabCommunication', () => ({
+  ...jest.requireActual('app/features/alerting/unified/utils/tabCommunication'),
+  useSubsribeTabCommunicationChannel: jest.fn(),
+  useSendTabCommunicationChannel: jest.fn(() => ({ postMessage: jest.fn() })),
+}));
+
 beforeEach(() => {
   grantUserPermissions([AccessControlAction.AlertingNotificationsRead, AccessControlAction.AlertingNotificationsWrite]);
   setupGrafanaManagedServer(server);

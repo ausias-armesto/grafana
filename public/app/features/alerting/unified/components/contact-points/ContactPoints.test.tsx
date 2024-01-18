@@ -39,6 +39,13 @@ import setupVanillaAlertmanagerFlavoredServer, {
  */
 const server = setupMswServer();
 
+// We need to mock the hooks as BroadCastChannel is not available in jest environment
+jest.mock('app/features/alerting/unified/utils/tabCommunication', () => ({
+  ...jest.requireActual('app/features/alerting/unified/utils/tabCommunication'),
+  useSubsribeTabCommunicationChannel: jest.fn(),
+  useSendTabCommunicationChannel: jest.fn(() => ({ postMessage: jest.fn() })),
+}));
+
 describe('contact points', () => {
   describe('Contact points with Grafana managed alertmanager', () => {
     beforeEach(() => {
