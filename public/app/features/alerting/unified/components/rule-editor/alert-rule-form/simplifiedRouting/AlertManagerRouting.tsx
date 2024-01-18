@@ -2,7 +2,7 @@ import { css } from '@emotion/css';
 import React, { useState } from 'react';
 
 import { GrafanaTheme2 } from '@grafana/data';
-import { Alert, CollapsableSection, Icon, Link, LoadingPlaceholder, Stack, Text, useStyles2 } from '@grafana/ui';
+import { Alert, CollapsableSection, LoadingPlaceholder, Stack, TextLink, useStyles2 } from '@grafana/ui';
 import { AlertManagerDataSource } from 'app/features/alerting/unified/utils/datasource';
 import {
   AlertingTabMessageTypes,
@@ -82,15 +82,11 @@ export function AlertManagerManualRouting({ alertManager }: AlertManagerManualRo
   );
 }
 function LinkToContactPoints() {
-  const styles = useStyles2(getStyles);
   const hrefToContactPoints = '/alerting/notifications';
   return (
-    <Link target="_blank" href={createUrl(hrefToContactPoints)} rel="noopener" aria-label="View alert rule">
-      <div className={styles.contactPointsInfo}>
-        <Text color="link">View or create contact points</Text>
-        <Icon name={'external-link-alt'} size="sm" color="link" />
-      </div>
-    </Link>
+    <TextLink external href={createUrl(hrefToContactPoints)} aria-label="View or create contact points">
+      View or create contact points
+    </TextLink>
   );
 }
 
