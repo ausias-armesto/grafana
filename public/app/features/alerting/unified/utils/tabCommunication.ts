@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 export const ALERTING_CHANNEL_NAME = 'alerting';
 
@@ -23,7 +23,8 @@ export interface AlertingMessage {
  */
 
 export const useSubsribeTabCommunicationChannel = (type: AlertingTabMessageTypes, onReceiveMessage: () => void) => {
-  const alertingBroadcastChannelReceiver = useMemo(() => new BroadcastChannel(ALERTING_CHANNEL_NAME), []);
+  const alertingBroadcastChannelReceiverRef = useRef(new BroadcastChannel(ALERTING_CHANNEL_NAME));
+  const alertingBroadcastChannelReceiver = alertingBroadcastChannelReceiverRef.current;
   useEffect(() => {
     const onMessage = (event: MessageEvent<AlertingMessage>) => {
       if (event.data.type === type) {
@@ -41,10 +42,8 @@ export const useSubsribeTabCommunicationChannel = (type: AlertingTabMessageTypes
  */
 
 export const useSendTabCommunicationChannel = () => {
-  const alertingBroadcastChannelSender: BroadcastChannel = useMemo(
-    () => new BroadcastChannel(ALERTING_CHANNEL_NAME),
-    []
-  );
+  const alertingBroadcastChannelSenderRef = useRef(new BroadcastChannel(ALERTING_CHANNEL_NAME));
+  const alertingBroadcastChannelSender = alertingBroadcastChannelSenderRef.current;
 
   const postMessage = useCallback(
     (type: AlertingTabMessageTypes) => {
