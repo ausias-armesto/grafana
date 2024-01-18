@@ -1,12 +1,10 @@
+import { css } from '@emotion/css';
 import { debounce, unionBy } from 'lodash';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 
-import { SelectableValue, toOption } from '@grafana/data';
-import { MultiSelect } from '@grafana/ui';
+import { SelectableValue, toOption, GrafanaTheme2 } from '@grafana/data';
+import { Alert, MultiSelect, useStyles2 } from '@grafana/ui';
 import { InputActionMeta } from '@grafana/ui/src/components/Select/types';
-import { notifyApp } from 'app/core/actions';
-import { createErrorNotification } from 'app/core/copy/appNotification';
-import { dispatch } from 'app/store/store';
 
 import { CloudWatchDatasource } from '../../../datasource';
 import { appendTemplateVariables } from '../../../utils/utils';
@@ -37,6 +35,24 @@ export const LogGroupSelector: React.FC<LogGroupSelectorProps> = ({
 }) => {
   const [loadingLogGroups, setLoadingLogGroups] = useState(false);
   const [availableLogGroups, setAvailableLogGroups] = useState<Array<SelectableValue<string>>>([]);
+  const [error, setError] = useState('');
+  const timeoutId = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    clearTimeout(timeoutId.current);
+    if (error) {
+      timeoutId.current = setTimeout(() => {
+        setError('');
+      }, 7000);
+    }
+
+    return () => {
+      clearTimeout(timeoutId.current);
+    };
+  }, [error]);
+  const dismissError = () => {
+    setError('');
+  };
+  const styles = useStyles2(getStyles);
   const logGroupOptions = useMemo(
     () => unionBy(availableLogGroups, selectedLogGroups?.map(toOption), 'value'),
     [availableLogGroups, selectedLogGroups]
@@ -51,7 +67,7 @@ export const LogGroupSelector: React.FC<LogGroupSelectorProps> = ({
         const logGroups = await datasource.resources.legacyDescribeLogGroups(region, logGroupNamePrefix);
         return logGroups;
       } catch (err) {
-        dispatch(notifyApp(createErrorNotification(typeof err === 'string' ? err : JSON.stringify(err))));
+        setError(typeof err === 'string' ? err : JSON.stringify(err));
         return [];
       }
     },
@@ -69,7 +85,7 @@ export const LogGroupSelector: React.FC<LogGroupSelectorProps> = ({
     const logGroupNamePattern = /^[\.\-_/#A-Za-z0-9]+$/;
     if (!logGroupNamePattern.test(searchTerm)) {
       if (searchTerm !== '') {
-        dispatch(notifyApp(createErrorNotification('Invalid Log Group name: ' + searchTerm)));
+        setError('Invalid Log Group name: ' + searchTerm);
       }
       return;
     }
@@ -120,25 +136,40 @@ export const LogGroupSelector: React.FC<LogGroupSelectorProps> = ({
   const onLogGroupSearchDebounced = debounce(onLogGroupSearch, DEBOUNCE_TIMER);
 
   return (
-    <MultiSelect
-      inputId="default-log-groups"
-      aria-label="Log Groups"
-      allowCustomValue
-      options={datasource ? appendTemplateVariables(datasource, logGroupOptions) : logGroupOptions}
-      value={selectedLogGroups}
-      onChange={(v) => onChange(v.filter(({ value }) => value).map(({ value }) => value))}
-      closeMenuOnSelect={false}
-      isClearable
-      isOptionDisabled={() => selectedLogGroups.length >= MAX_LOG_GROUPS}
-      placeholder="Choose Log Groups"
-      maxVisibleValues={MAX_VISIBLE_LOG_GROUPS}
-      noOptionsMessage="No log groups available"
-      isLoading={loadingLogGroups}
-      onOpenMenu={onOpenLogGroupMenu}
-      onInputChange={(value, actionMeta) => {
-        onLogGroupSearchDebounced(value, region, actionMeta);
-      }}
-      width={width}
-    />
+    <>
+      {error && <Alert className={styles.alert} title={error} severity="error" elevated onRemove={dismissError} />}
+      <MultiSelect
+        inputId="default-log-groups"
+        aria-label="Log Groups"
+        allowCustomValue
+        options={datasource ? appendTemplateVariables(datasource, logGroupOptions) : logGroupOptions}
+        value={selectedLogGroups}
+        onChange={(v) => onChange(v.filter(({ value }) => value).map(({ value }) => value))}
+        closeMenuOnSelect={false}
+        isClearable
+        isOptionDisabled={() => selectedLogGroups.length >= MAX_LOG_GROUPS}
+        placeholder="Choose Log Groups"
+        maxVisibleValues={MAX_VISIBLE_LOG_GROUPS}
+        noOptionsMessage="No log groups available"
+        isLoading={loadingLogGroups}
+        onOpenMenu={onOpenLogGroupMenu}
+        onInputChange={(value, actionMeta) => {
+          onLogGroupSearchDebounced(value, region, actionMeta);
+        }}
+        width={width}
+      />
+    </>
   );
+};
+
+const getStyles = (theme: GrafanaTheme2) => {
+  return {
+    alert: css({
+      position: 'fixed',
+      top: theme.spacing(10),
+      right: theme.spacing(0.5),
+      minWidth: 400,
+      maxWidth: 600,
+    }),
+  };
 };
