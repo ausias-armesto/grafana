@@ -87,8 +87,7 @@ function LinkToContactPoints() {
   return (
     <Link target="_blank" href={createUrl(hrefToContactPoints)} rel="noopener" aria-label="View alert rule">
       <div className={styles.contactPointsInfo}>
-        <Text color="secondary">To browse contact points and create new ones, go to</Text>
-        <Text color="link">Contact points</Text>
+        <Text color="link">View or create contact points</Text>
         <Icon name={'external-link-alt'} size="sm" color="link" />
       </div>
     </Link>
