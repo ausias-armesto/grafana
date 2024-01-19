@@ -100,6 +100,7 @@ func (s *sqlEntityServer) getReadFields(r *entity.ReadEntityRequest) []string {
 		"origin", "origin_key", "origin_ts",
 		"meta",
 		"title", "slug", "description", "labels", "fields",
+		"message",
 	}
 
 	if r.WithBody {
@@ -145,6 +146,7 @@ func (s *sqlEntityServer) rowToEntity(ctx context.Context, rows *sql.Rows, r *en
 		&raw.Origin.Source, &raw.Origin.Key, &raw.Origin.Time,
 		&raw.Meta,
 		&raw.Title, &raw.Slug, &raw.Description, &labels, &fields,
+		&raw.Message,
 	}
 	if r.WithBody {
 		args = append(args, &raw.Body)
@@ -156,10 +158,6 @@ func (s *sqlEntityServer) rowToEntity(ctx context.Context, rows *sql.Rows, r *en
 	err := rows.Scan(args...)
 	if err != nil {
 		return nil, err
-	}
-
-	if raw.Origin.Source == "" {
-		raw.Origin = nil
 	}
 
 	// unmarshal json labels
@@ -289,6 +287,10 @@ func (s *sqlEntityServer) Create(ctx context.Context, r *entity.CreateEntityRequ
 	}
 
 	createdAt := r.Entity.CreatedAt
+	if createdAt < 1000 {
+		createdAt = time.Now().UnixMilli()
+	}
+
 	createdBy := r.Entity.CreatedBy
 	if createdBy == "" {
 		modifier, err := appcontext.User(ctx)
@@ -300,6 +302,7 @@ func (s *sqlEntityServer) Create(ctx context.Context, r *entity.CreateEntityRequ
 		}
 		createdBy = store.GetUserIDString(modifier)
 	}
+
 	updatedAt := r.Entity.UpdatedAt
 	updatedBy := r.Entity.UpdatedBy
 
@@ -325,6 +328,10 @@ func (s *sqlEntityServer) Create(ctx context.Context, r *entity.CreateEntityRequ
 
 		// generate guid for new entity
 		current.Guid = uuid.New().String()
+
+		// set created at/by
+		current.CreatedAt = createdAt
+		current.CreatedBy = createdBy
 
 		// parse provided key
 		key, err := entity.ParseKey(r.Entity.Key)
@@ -361,6 +368,7 @@ func (s *sqlEntityServer) Create(ctx context.Context, r *entity.CreateEntityRequ
 
 		etag := createContentsHash(current.Body, current.Meta, current.Status)
 		current.ETag = etag
+
 		current.UpdatedAt = updatedAt
 		current.UpdatedBy = updatedBy
 
@@ -423,13 +431,13 @@ func (s *sqlEntityServer) Create(ctx context.Context, r *entity.CreateEntityRequ
 			"group":            current.Group,
 			"resource":         current.Resource,
 			"name":             current.Name,
-			"created_at":       createdAt,
-			"created_by":       createdBy,
+			"created_at":       current.CreatedAt,
+			"created_by":       current.CreatedBy,
 			"group_version":    current.GroupVersion,
 			"folder":           current.Folder,
 			"slug":             current.Slug,
-			"updated_at":       updatedAt,
-			"updated_by":       updatedBy,
+			"updated_at":       current.UpdatedAt,
+			"updated_by":       current.UpdatedBy,
 			"body":             current.Body,
 			"meta":             current.Meta,
 			"status":           current.Status,
@@ -489,8 +497,11 @@ func (s *sqlEntityServer) Update(ctx context.Context, r *entity.UpdateEntityRequ
 		return nil, err
 	}
 
-	timestamp := time.Now().UnixMilli()
 	updatedAt := r.Entity.UpdatedAt
+	if updatedAt < 1000 {
+		updatedAt = time.Now().UnixMilli()
+	}
+
 	updatedBy := r.Entity.UpdatedBy
 	if updatedBy == "" {
 		modifier, err := appcontext.User(ctx)
@@ -501,9 +512,6 @@ func (s *sqlEntityServer) Update(ctx context.Context, r *entity.UpdateEntityRequ
 			return nil, fmt.Errorf("can not find user in context")
 		}
 		updatedBy = store.GetUserIDString(modifier)
-	}
-	if updatedAt < 1000 {
-		updatedAt = timestamp
 	}
 
 	rsp := &entity.UpdateEntityResponse{
@@ -564,6 +572,7 @@ func (s *sqlEntityServer) Update(ctx context.Context, r *entity.UpdateEntityRequ
 
 		etag := createContentsHash(current.Body, current.Meta, current.Status)
 		current.ETag = etag
+
 		current.UpdatedAt = updatedAt
 		current.UpdatedBy = updatedBy
 
@@ -633,8 +642,8 @@ func (s *sqlEntityServer) Update(ctx context.Context, r *entity.UpdateEntityRequ
 			"group_version":    current.GroupVersion,
 			"folder":           current.Folder,
 			"slug":             current.Slug,
-			"updated_at":       updatedAt,
-			"updated_by":       updatedBy,
+			"updated_at":       current.UpdatedAt,
+			"updated_by":       current.UpdatedBy,
 			"body":             current.Body,
 			"meta":             current.Meta,
 			"status":           current.Status,
