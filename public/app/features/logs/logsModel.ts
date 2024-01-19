@@ -35,7 +35,6 @@ import {
   ScopedVars,
   sortDataFrame,
   textUtil,
-  TimeRange,
   toDataFrame,
   toUtc,
 } from '@grafana/data';
@@ -640,9 +639,8 @@ const updateLogsVolumeConfig = (
 };
 
 type LogsVolumeQueryOptions<T extends DataQuery> = {
-  extractLevel: (dataFrame: DataFrame) => LogLevel;
+  extractLevel?: (dataFrame: DataFrame) => LogLevel;
   targets: T[];
-  range: TimeRange;
 };
 
 function defaultExtractLevel(dataFrame: DataFrame): LogLevel {
@@ -664,11 +662,11 @@ function getLogLevelFromLabels(labels: Labels): LogLevel {
 export function queryLogsVolume<TQuery extends DataQuery, TOptions extends DataSourceJsonData>(
   datasource: DataSourceApi<TQuery, TOptions>,
   logsVolumeRequest: DataQueryRequest<TQuery>,
-  options?: LogsVolumeQueryOptions<TQuery>
+  options: LogsVolumeQueryOptions<TQuery>
 ): Observable<DataQueryResponse> {
-  const range = options ? options.range : logsVolumeRequest.range;
-  const targets = options ? options.targets : logsVolumeRequest.targets;
-  const extractLevel = options ? options.extractLevel : defaultExtractLevel;
+  const range = logsVolumeRequest.range;
+  const targets = options.targets;
+  const extractLevel = options.extractLevel ? options.extractLevel : defaultExtractLevel;
   const timespan = range.to.valueOf() - range.from.valueOf();
   const intervalInfo = getIntervalInfo(logsVolumeRequest.scopedVars, timespan);
 
